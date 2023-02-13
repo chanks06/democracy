@@ -1,0 +1,323 @@
+---
+title: "American Democracy & Social Media in the 21st Century:\nAn Analysis of the Varietes of Democracy Dataset"
+output: pdf_document
+author: "Charles Hanks & Ben Rubin"
+date: "2022-12-08"
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(vdemdata)
+library(rvest)
+library(tidyverse)
+library(plotly)
+```
+
+
+### I. Peer Feedback Summary 
+
+  We received feedback inviting us to include more context for the audience. One peer advised that we ‘humanize’ the subject by adding real-world examples of how democracy is threatened in the US. In response we centered our presentation on the January 6 riot at the Capitol to emphasize that our findings from our analysis are consistent with current events. 
+  We also received a note that we had too much text to read on our slides and in our graphs. So in our presentation we verbally guided our audience through our story of democracy in the US. We cut unnecessary text from our slides and used more descriptive terms for the material and the data used.
+  A common recommendation was to animate our graphics. We animated our last graphic so our audience could see how democracy and misinformation changed over the years, as well as allow interactability to see which dot represented which country. 
+  Last, we had comments about making it apparent which of the faceted graphics we were focusing on. We rectified that by guiding our audience through the presentation and showing the graphic in the next slide.
+  
+### II. Final Piece: 
+
+[Democracy as Weakens as Politicians Increasingly Use Social Media](https://rpubs.com/chanks_hanks/vdem)
+
+### III. Code for Graphs from Final Presentation
+
+The US is now a 'Flawed Democracy' 
+```{r}
+demo_types = c(v2x_polyarchy ="elections are free and fair",v2x_libdem ="individual rights protected", v2x_partipdem ="citizens actively participate\nin all political processes",v2x_delibdem ="political decisions made\n for the common good", v2x_egaldem="rights and freedoms protected\nequally across social groups")
+
+ggplot(vdem %>% filter(country_name == "United States of America") %>% 
+            dplyr::select(country_name, year, v2x_polyarchy, v2x_libdem,v2x_partipdem,v2x_delibdem,v2x_egaldem) %>%
+               gather(key = "index_type", value = "index_value",3:7), aes(x = year, y = index_value), group = 1) + 
+  geom_line(size = 1) + 
+  xlim(1980,2021) +
+  facet_wrap(~index_type,labeller = labeller(index_type = demo_types)) + 
+  labs(title = "The United States is Now a 'Flawed Democracy'", 
+       subtitle = "with the most backsliding between 2015 and 2020",
+       y = "Democratic index value (0 - 1)", 
+       x = "Year") + 
+  annotate("rect", fill = "red", alpha = 0.5, 
+           xmin = 2015, xmax = 2020,
+           ymin = -Inf, ymax = Inf) + 
+  theme_bw() + 
+  theme(strip.text = element_text(size = 10, face = "italic"), 
+        title = element_text(size = 15, face = "bold"), 
+        axis.title.y = element_text(size = 10, face = "bold"), 
+        axis.title.x = element_text(size = 10, face = "bold"),
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(face = "plain", hjust = 0.5),
+        plot.background = element_rect(fill = "cornsilk1"),
+        legend.background = element_rect(fill = "cornsilk1"))
+```
+ 
+
+The most significant Decline in US has been of Deliberative Democracy
+```{r}
+ggplot(vdem %>% filter(country_name == "United States of America") %>% 
+            dplyr::select(country_name, year, v2x_delibdem), aes(x = year, y = v2x_delibdem), group = 1) + 
+  geom_line(size = 1) + 
+  xlim(2014,2021) + 
+  labs(title = "The Deliberative Democracy Rating\nin USA Dropped by 28 % in 5 Years", 
+       subtitle = "",
+       y = "Deliberative Democracy Rating", 
+       x = "Year") + 
+  annotate("rect", fill = "red", alpha = 0.5, 
+           xmin = 2015, xmax = 2020,
+           ymin = -Inf, ymax = Inf) + 
+  theme_bw() + 
+  theme(strip.text = element_text(size = 10, face = "italic"), 
+        title = element_text(size = 20, face = "bold"), 
+        axis.title.y = element_text(size = 10, face = "bold"), 
+        axis.title.x = element_text(size = 10, face = "bold"),
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(face = "plain", hjust = 0.5),
+        plot.background = element_rect(fill = "cornsilk1"),
+        legend.background = element_rect(fill = "cornsilk1")) + 
+  annotate("label", x = 2015, y = 0.81, label = "0.85", fontface = "bold", size = 7, alpha =.5) + 
+  annotate("label", x = 2020, y = 0.54, label = "0.57", fontface = "bold", size = 7, alpha =.5)
+```
+Deliberative Democracy vs. Political Misinformation
+```{r}
+#arranging countries by worst change in democratic rating 
+dem_slide = vdem %>% filter(year == 2000 | year == 2010 | year == 2020) %>% 
+            dplyr::select(country_name, year, v2x_polyarchy) %>%
+              spread(key = year, value = v2x_polyarchy) %>% 
+                mutate(d_diff = `2020` - `2000`) %>% 
+                  arrange(d_diff)
+top_40 = dem_slide[1:40,]
+worst_change40 = top_40$country_name 
+
+#USA dataframe 
+usa = vdem %>% filter(country_name == "United States of America" & (year == 2000 | year == 2010 | year == 2020)) %>% 
+  dplyr::select(country_name, year, v2smpardom, v2x_delibdem)
+
+#Creating USA label 
+usa_text = data.frame(v2smpardom = 1.8, v2x_delibdem = .70, lab = "USA", year = 2000)
+
+#Plotting graphs
+vdem %>% filter(country_name %in% worst_change40 & ( year == 2000 | year == 2010 | year == 2020)) %>% 
+            dplyr::select(country_name, year, v2smpardom, v2x_delibdem) %>% 
+              ggplot(aes(x = v2smpardom, y = v2x_delibdem), color = "grey") + geom_point(alpha =.5) + 
+              geom_point(data = usa, aes(x = v2smpardom, y = v2x_delibdem), color = "red", size = 5, shape = 15 ) +
+              scale_x_reverse(labels = c('Extremely Often', 'Often', 'About half the time', 'Rarely', 'Never, or almost never'), limits = c(3,-3)) +
+              geom_text(data = usa_text, label = "USA", color = "red", fontface = "bold") +
+              theme_bw() + 
+              theme(
+                    plot.title = element_text(face = "bold", size = 18, hjust = 0.5), 
+                    plot.subtitle = element_text(face = "plain", size = 15, hjust = 0.5),
+                    plot.caption = element_text(face = "plain", size = 8),
+                    plot.background = element_rect(fill = "cornsilk1"),
+                    legend.background = element_rect(fill = "cornsilk1")) + 
+              facet_grid(year~.) + 
+              labs(title = "USA is Ranked 32nd Among the 40 Countries\nwith the Most Decline in Deliberative Democracy", 
+                   subtitle = "The Countries with the Most Decline Are Bolivia, Venezuela, & Nicaragua", 
+                   x = "Goverment use of Social Media to Spread Misinformation", 
+                   y = "Deliberative Democracy Rating", 
+                   caption = "Source: Varieties of Democracy Codebook v12")
+
+
+```
+Animated version 
+```{r}
+
+dem_slide = vdem %>% filter(year == 2000 | year == 2010 | year == 2020) %>%
+            dplyr::select(country_name, year, v2x_polyarchy) %>%
+              spread(key = year, value = v2x_polyarchy) %>%
+                mutate(d_diff = `2020` - `2000`) %>%
+                  arrange(d_diff)
+top_40 = dem_slide[1:40,]
+worst_change40 = top_40$country_name
+
+
+#USA dataframe
+usa = vdem %>% filter(country_name == "United States of America" & (year %in% 2000:2021)) %>%
+  dplyr::select(country_name, year, v2smpardom, v2x_delibdem)
+
+#Creating USA label
+usa_text = data.frame(v2smpardom = 1.8, v2x_delibdem = .70, lab = "USA", year = 2000:2021)
+usa_text
+
+#Plotting graphs
+
+countries2 = vdem %>% filter(country_name %in% worst_change40 & ( year %in% 2000:2021)) %>%
+            dplyr::select(country_name, year, v2smpardom, v2x_delibdem)
+
+p = ggplot(countries2, aes(label = country_name, x = v2smpardom, y = v2x_delibdem, frame = year)) + 
+              geom_point(alpha =.8, color = "grey") +
+              geom_point(data = usa, aes(x = v2smpardom, y = v2x_delibdem, frame=year), color = "red", size = 5, shape = 15 ) +
+              scale_x_reverse(labels = c('Extremely Often', 'Often', 'About half the time', 'Rarely', 'Never, or almost never'), limits = c(3,-3)) +
+              geom_text(data = usa, aes(x = v2smpardom, y = v2x_delibdem, frame=year), label = "USA", color = "red", fontface = "bold", nudge_x = .1, nudge_y = .1) +
+              theme_bw() +
+              theme(
+                    plot.title = element_text(face = "bold", size = 10, hjust = 0.5),
+                    plot.subtitle = element_text(face = "plain", size = 15, hjust = 0.5),
+                    plot.caption = element_text(face = "plain", size = 8),
+                    plot.background = element_rect(fill = "cornsilk1"),
+                    legend.background = element_rect(fill = "cornsilk1")) +
+              labs(title = "Democracy Weakens Globally as Politicians Use Social Media\nto Spread False and Misleading Information",
+                   subtitle = "USA is among the 40 Countries with Worst Deliberative Democratic Decline from 2000 to 2021",
+                   x = "How often major political parties and candidates use social media to spread false information",
+                   y = "Deliberative Democracy Rating")
+
+ggplotly(p)
+```
+
+
+
+
+
+
+Example of Social Media's Rise in Influence: Facebook
+```{r}
+html=read_html('https://www.statista.com/statistics/264810/number-of-monthly-active-facebook-users-worldwide/')
+table=html_table(html)
+facebook=as.data.frame(table)
+faceq4=facebook[grep("Q4",facebook$Characteristic),]
+
+faceq4$Characteristic=sub("Q4 '","20", faceq4$Characteristic)
+faceq4$Number.of.users.in.millions=sub(",","",faceq4$Number.of.users.in.millions)
+
+faceq4=faceq4 %>% rename("Year"="Characteristic","MAU_Millions"='Number.of.users.in.millions')
+faceq4=faceq4 %>% mutate(Year=as.numeric(Year),MAU_Millions=as.numeric(MAU_Millions))
+faceq4=faceq4 %>% mutate(MAU_Billions=MAU_Millions/1000)
+
+ggplot(faceq4, aes(x = Year)) + 
+ geom_line(aes(y = MAU_Billions), color = "red", size = 2)+
+  xlim(2008,2021) +
+  scale_y_continuous(breaks=c(0,.5,1,1.5,2,2.5,3))+
+  scale_x_continuous(breaks=c(2009,2011,2013,2015,2017,2019,2021))+
+  ylab("Monthly Active Users (Billions)")+
+  labs(title = "Facebook Popularity Growth")+
+  theme_bw() + 
+  theme(title = element_text(size = 10, face = "bold"),
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        plot.background = element_rect(fill = "cornsilk1"),
+        legend.background = element_rect(fill = "cornsilk1"))
+```
+
+Social Media is Becoming a Political Propaganda Machine in USA
+```{r}
+usa = vdem %>% filter(country_name == "United States of America") 
+
+ggplot(usa, aes(x = year)) + 
+  geom_line(aes(y = v2smpardom_osp), color = "forestgreen", size = 2) + 
+  geom_line(aes(y = v2smgovdom_osp), color = "purple", size =2) + 
+  
+  xlim(1999,2021) + 
+  scale_y_reverse(labels = c('Extremely Often', 'Often', 'About half the time', 'Rarely', 'Never, or almost never'), limits = c(4,0)) + 
+  labs(title = "Social Media is Becoming\na Political Propaganda Machine in USA",
+       y = "Frequency of False Info dissemination", x = "Year") + 
+  
+  annotate("text", x = 2005, y = 2.4, label = "False information spread by\npolitical parties and candidates\non social media", color = "forestgreen", size = 4, fontface = "bold") + 
+  annotate("text", x = 2015, y = 2, label = "False information\nspread by government\nofficials on social media  ", color = "purple", size = 4, fontface = "bold") + 
+  theme_bw() + 
+  theme(title = element_text(size = 15, face = "bold"),
+        plot.title = element_text(hjust = 0.5),
+        axis.title.y = element_text(size = 10),
+        axis.title.x = element_text(size = 10),
+        plot.subtitle = element_text(hjust = 0.5),
+        plot.background = element_rect(fill = "cornsilk1"),
+        legend.background = element_rect(fill = "cornsilk1"))
+```
+
+
+Our Political Discourse is Influenced by Foreign Misinformation Campaigns
+```{r}
+
+
+ggplot(usa, aes(x = year), group = 1) + 
+  geom_line(aes(y = v2smfordom_osp), color = "blue", size = 2) + 
+  geom_line(aes(y = v2smforads_osp), color = "red", size = 2) + 
+  scale_y_reverse(labels = c('Extremely Often', 'Often', 'About half the time', 'Rarely', 'Never, or almost never'), limits = c(4,0)) +
+  xlim(2000,2021) + 
+  labs(title = "Our Political Discourse is Influenced\nby Foreign Disinformation Campaigns", 
+       y = "Frequency of dissemination", x = "Year") + 
+  annotate("text", x = 2005, y = 1.5, label = "False information posted on\nsocial media by foreign agents",size =4, color = "blue", fontface = "bold") + 
+  annotate("text", x = 2008, y = 3.2, label = "Online advertising bought by foreign agents\n to spread misleading viewpoints",size =4, color = "red", fontface = "bold") + 
+  theme_bw() + 
+  theme(title = element_text(size = 16, face = "bold"),
+        axis.title.y = element_text(size = 10),
+        axis.title.x = element_text(size = 10),
+        plot.title = element_text(hjust = 0.5),
+        plot.background = element_rect(fill = "cornsilk1"),
+        legend.background = element_rect(fill = "cornsilk1"))
+```
+US Politics is Becoming More Dangerous 
+```{r}
+
+usa2 = vdem %>% filter(country_name == "United States of America") %>% 
+  dplyr::select(country_name, year, v2caviol, v2cacamps) %>%
+               gather(key = "index_type", value = "index_value", 3:4)
+
+ggplot(usa2, aes( x = year, y = index_value)) + 
+  geom_line(aes(color = index_type), size = 2) + 
+  xlim(1999,2021) +
+  scale_color_manual(values = c("coral1", "cornflowerblue")) + 
+  scale_y_continuous(limits=c(-1,3),breaks = c(-1,0,1,2,3), labels=c("Never","Rare","Sometimes","Frequently","Often"))+
+  labs(title = "US Politics is Becoming More Dangerous", y="Aggregated Expert Response")+
+  annotate("text", x = 2010, y = 1, label = "Political Polarization",size =4, color = "coral1", fontface = "bold") + 
+  annotate("text", x = 2013, y = 0, label = "Political Violence",size =4, color = "cornflowerblue", fontface = "bold") +
+  theme_bw() + 
+  theme(strip.text = element_text(size = 10),
+        title = element_text(size = 15, face = "bold"), 
+        plot.title = element_text(hjust = 0.5), 
+         axis.title.y = element_text(size = 10),
+        axis.title.x = element_text(size = 10),
+        plot.background = element_rect(fill = "cornsilk1"),
+        legend.background = element_rect(fill = "cornsilk1"),
+        strip.text.x = element_text(face = "bold"), 
+        legend.position = "none")
+```
+Hate Speech & Harassement of Journalists 
+```{r}
+metrics_of_demo2 = c(v2meharjrn_osp ="Journalist Harassment",v2smpolhate_osp ="Hate Speech")
+
+usa3 = vdem %>% filter(country_name == "United States of America") %>% 
+  dplyr::select(country_name, year, v2meharjrn_osp, v2smpolhate_osp) %>%
+               gather(key = "index_type", value = "index_value", 3:4)
+
+ggplot(usa3, aes( x = year, y = index_value), group = 1)+
+  geom_line(aes(color = index_type), size = 2)+
+  xlim(2000,2021)+
+  scale_y_reverse(limits=c(4,0), labels=c("Certain","Often","Sometimes","Rare","Never"))+
+  scale_color_manual(values = c("coral1", "cornflowerblue")) +
+  ggtitle("As Political Social Media Campaigns Flourish, USA is Increasingly Hostile")+
+  labs(y="Aggregated Expert Response")+
+  annotate("text", x = 2010, y = 2.1, label = "Hate Speech",size =4, color = "cornflowerblue", fontface = "bold") + 
+  annotate("text", x = 2017, y = 3.7, label = "Harrassment of Journalists",size =4, color = "coral1", fontface = "bold") +
+  theme_bw() + 
+  theme(title = element_text(size = 8, face = "bold"), 
+        plot.title = element_text(hjust = 0.5),
+        plot.background = element_rect(fill = "cornsilk1"),
+        legend.background = element_rect(fill = "cornsilk1"),
+        strip.text.x = element_text(face = "bold"), 
+        legend.position = "none")
+
+```
+Rise in Misinformation Means More Real World Violence
+```{r}
+vdem %>% filter(country_name==c("United States of America")) %>% filter(year>2000) %>% 
+  ggplot(aes(x=year,y=-v2smorgviol))+
+  geom_point(color = "grey")+
+  geom_smooth(se=FALSE, color = "red", size = 2)+
+  scale_y_continuous(limits =c(0,2),breaks=c(0,1,2),labels=c("Never","Sometimes","Often"))+
+  ggtitle("This Polarization & Hostility on Social Media\nResults in Real World Violence")+
+  labs(y="Frequency of Offline Violence Organized on Social Media", x = "Year")+
+  
+  theme_bw() + 
+  theme(title = element_text(size = 15, face = "bold"), 
+        plot.title = element_text(hjust = 0.5),
+        axis.title.y = element_text(size = 10),
+        axis.title.x = element_text(size = 10),
+        plot.background = element_rect(fill = "cornsilk1"),
+        legend.background = element_rect(fill = "cornsilk1"))
+```
+
